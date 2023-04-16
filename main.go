@@ -26,6 +26,7 @@ func main() {
 	r := gin.Default()
 
 	routes.SetupUserRoutes(r)
+	routes.SetupAuthRoutes(r)
 
 	r.Run()
 }

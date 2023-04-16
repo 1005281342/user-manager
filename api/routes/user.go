@@ -4,6 +4,7 @@ import (
 	"github.com/1005281342/user-manager/db"
 	"github.com/1005281342/user-manager/models"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
 )
@@ -26,7 +27,7 @@ func GetUser(c *gin.Context) {
 	var user User
 	query := "SELECT * FROM users WHERE id = $1"
 	row := db.GetDB().QueryRow(query, id)
-	if err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email); err != nil {
+	if err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -41,8 +42,14 @@ func CreateUser(c *gin.Context) {
 		return
 	}
 
-	query := "INSERT INTO users (first_name, last_name, email) VALUES ($1, $2, $3) RETURNING id"
-	row := db.GetDB().QueryRow(query, user.FirstName, user.LastName, user.Email)
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	query := "INSERT INTO users (first_name, last_name, email, password) VALUES ($1, $2, $3, $4) RETURNING id"
+	row := db.GetDB().QueryRow(query, user.FirstName, user.LastName, user.Email, string(hash))
 	var id int
 	if err := row.Scan(&id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -64,26 +71,30 @@ func UpdateUser(c *gin.Context) {
 
 	id := c.Param("id")
 
-	db := db.GetDB()
+	// Check if user exists
+	var existingUser User
+	query := "SELECT * FROM users WHERE id = $1"
+	row := db.GetDB().QueryRow(query, id)
+	if err := row.Scan(&existingUser.ID, &existingUser.FirstName, &existingUser.LastName, &existingUser.Email, &existingUser.Password); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
 
-	result, err := db.Exec("UPDATE users SET first_name=$1, last_name=$2, email=$3 WHERE id=$4", user.FirstName, user.LastName, user.Email, id)
+	// Update user
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	query = "UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5"
+	_, err = db.GetDB().Exec(query, user.FirstName, user.LastName, user.Email, string(hash), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if rowsAffected == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "user updated successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
 // api/routes/user.go
@@ -92,27 +103,23 @@ func DeleteUser(c *gin.Context) {
 	id := c.Param("id")
 
 	// Check if user exists
-	var user User
-	err := db.GetDB().QueryRow("SELECT id, first_name, last_name, email FROM users WHERE id=$1", id).Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{
-			"error": "user not found",
-		})
+	var existingUser User
+	query := "SELECT * FROM users WHERE id = $1"
+	row := db.GetDB().QueryRow(query, id)
+	if err := row.Scan(&existingUser.ID, &existingUser.FirstName, &existingUser.LastName, &existingUser.Email, &existingUser.Password); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
 	// Delete user
-	err = db.DeleteUser(id)
+	query = "DELETE FROM users WHERE id = $1"
+	_, err := db.GetDB().Exec(query, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to delete user",
-		})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "user deleted successfully",
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }
 
 func ListUsers(c *gin.Context) {

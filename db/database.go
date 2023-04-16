@@ -114,3 +114,16 @@ func GetAllUsersPerPage(perPage int, page int) ([]models.User, error) {
 
 	return users, nil
 }
+
+func GetUserByEmail(email string) (*models.User, error) {
+	var user models.User
+
+	row := GetDB().QueryRow("SELECT id, first_name, last_name, email, password FROM users WHERE email=$1", email)
+
+	err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
