@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"github.com/1005281342/user-manager/auth"
 	"github.com/1005281342/user-manager/db"
 	"github.com/1005281342/user-manager/models"
 	"github.com/gin-gonic/gin"
@@ -9,13 +10,13 @@ import (
 	"strconv"
 )
 
-func SetupUserRoutes(r *gin.Engine) {
+func SetupUserRoutes(r *gin.Engine, auth auth.Auth) {
 	user := r.Group("/user")
 
 	user.GET("/:id", GetUser)
 	user.POST("/", CreateUser)
-	user.PUT("/:id", UpdateUser)
-	user.DELETE("/:id", DeleteUser)
+	user.PUT("/:id", authMiddleware(auth), UpdateUser)
+	user.DELETE("/:id", authMiddleware(auth), DeleteUser)
 
 	r.GET("/users", ListUsers)
 	r.GET("/users/search", SearchUsers)

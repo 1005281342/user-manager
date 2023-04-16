@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/1005281342/user-manager/auth"
 	"github.com/gin-gonic/gin"
 
 	"github.com/1005281342/user-manager/api/routes"
@@ -25,7 +26,8 @@ func main() {
 
 	r := gin.Default()
 
-	routes.SetupUserRoutes(r)
+	jwtAuth := auth.NewJWTAuth("secret-key")
+	routes.SetupUserRoutes(r, jwtAuth)
 	routes.SetupAuthRoutes(r)
 
 	r.Run()

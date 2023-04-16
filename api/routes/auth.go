@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -62,4 +63,48 @@ func SetupAuthRoutes(r *gin.Engine) {
 
 		c.JSON(http.StatusOK, gin.H{"message": "logout success"})
 	})
+}
+
+func authMiddleware(auth auth.Auth) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "token not found"})
+			c.Abort()
+			return
+		}
+
+		userID, err := auth.VerifyToken(tokenString)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+			c.Abort()
+			return
+		}
+
+		user, err := db.GetUserByID(userID)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found"})
+			c.Abort()
+			return
+		}
+
+		// Check if the user is authorized to perform the action
+		if c.Request.Method == "PUT" || c.Request.Method == "DELETE" {
+			requestedUserID, err := strconv.Atoi(c.Param("id"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+				c.Abort()
+				return
+			}
+			if requestedUserID != user.ID {
+				c.JSON(http.StatusForbidden, gin.H{"error": "not authorized"})
+				c.Abort()
+				return
+			}
+		}
+
+		c.Set("user_id", userID)
+		c.Set("user", user)
+		c.Next()
+	}
 }
