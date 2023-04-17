@@ -2,12 +2,16 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"github.com/1005281342/user-manager/models"
 	_ "github.com/lib/pq"
 )
 
-var db *sql.DB
+var (
+	db          *sql.DB
+	ErrNoResult = errors.New("no result found")
+)
 
 func Connect() error {
 	var err error

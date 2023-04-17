@@ -2,12 +2,14 @@ package routes
 
 import (
 	"github.com/1005281342/user-manager/auth"
+	"github.com/1005281342/user-manager/cache"
 	"github.com/1005281342/user-manager/db"
 	"github.com/1005281342/user-manager/models"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 func SetupUserRoutes(r *gin.Engine, auth auth.Auth) {
@@ -25,15 +27,110 @@ func SetupUserRoutes(r *gin.Engine, auth auth.Auth) {
 func GetUser(c *gin.Context) {
 	id := c.Param("id")
 
+	redisCache := cache.NewRedisCache()
+	defer redisCache.Close()
+
+	// Check if the user is already in the cache
 	var user User
+	err := redisCache.Get("user:"+id, &user)
+	if err == nil {
+		c.JSON(http.StatusOK, user)
+		return
+	} else if err != db.ErrNoResult {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+
+	// If not, query the database
 	query := "SELECT * FROM users WHERE id = $1"
 	row := db.GetDB().QueryRow(query, id)
-	if err := row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password); err != nil {
+	err = row.Scan(&user.ID, &user.FirstName, &user.LastName, &user.Email, &user.Password)
+	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
+	// Add the user to the cache for future requests
+	err = redisCache.Set("user:"+id, user, 5*time.Minute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+
 	c.JSON(http.StatusOK, user)
+}
+
+func UpdateUser(c *gin.Context) {
+	var user User
+	err := c.ShouldBindJSON(&user)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
+		return
+	}
+
+	// Check if user exists
+	var existingUser User
+	query := "SELECT * FROM users WHERE id = $1"
+	row := db.GetDB().QueryRow(query, id)
+	if err := row.Scan(&existingUser.ID, &existingUser.FirstName, &existingUser.LastName, &existingUser.Email, &existingUser.Password); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		return
+	}
+
+	// Update user
+	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
+		return
+	}
+
+	err = updateUserInDBAndCache(id, user.FirstName, user.LastName, user.Email, string(hash))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal Server Error"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
+}
+
+func updateUserInDBAndCache(id int, firstName string, lastName string, email string, password string) error {
+	tx, err := db.GetDB().Begin()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+		err = tx.Commit()
+		if err != nil {
+			tx.Rollback()
+			return
+		}
+	}()
+
+	query := "UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5"
+	_, err = tx.Exec(query, firstName, lastName, email, password, id)
+	if err != nil {
+		return err
+	}
+
+	// Update the user in cache
+	redisCache := cache.NewRedisCache()
+	defer redisCache.Close()
+	err = redisCache.Set("user:"+strconv.Itoa(id), User{ID: id, FirstName: firstName, LastName: lastName, Email: email, Password: password}, 5*time.Minute)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func CreateUser(c *gin.Context) {
@@ -60,42 +157,6 @@ func CreateUser(c *gin.Context) {
 	user.ID = id
 
 	c.JSON(http.StatusCreated, user)
-}
-
-func UpdateUser(c *gin.Context) {
-	var user User
-	err := c.ShouldBindJSON(&user)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	id := c.Param("id")
-
-	// Check if user exists
-	var existingUser User
-	query := "SELECT * FROM users WHERE id = $1"
-	row := db.GetDB().QueryRow(query, id)
-	if err := row.Scan(&existingUser.ID, &existingUser.FirstName, &existingUser.LastName, &existingUser.Email, &existingUser.Password); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
-		return
-	}
-
-	// Update user
-	hash, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to hash password"})
-		return
-	}
-
-	query = "UPDATE users SET first_name = $1, last_name = $2, email = $3, password = $4 WHERE id = $5"
-	_, err = db.GetDB().Exec(query, user.FirstName, user.LastName, user.Email, string(hash), id)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
 // api/routes/user.go
