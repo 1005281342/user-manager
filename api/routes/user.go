@@ -5,10 +5,12 @@ import (
 	"github.com/1005281342/user-manager/cache"
 	"github.com/1005281342/user-manager/db"
 	"github.com/1005281342/user-manager/models"
+	"github.com/1005281342/user-manager/search"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,6 +24,7 @@ func SetupUserRoutes(r *gin.Engine, auth auth.Auth) {
 
 	r.GET("/users", ListUsers)
 	r.GET("/users/search", SearchUsers)
+	r.GET("/users/search/keys", SearchUsersWithKeywords)
 }
 
 func GetUser(c *gin.Context) {
@@ -225,6 +228,28 @@ func SearchUsers(c *gin.Context) {
 		users, err = db.SearchUsersPerPage(keyword, perPage, page)
 	}
 
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "failed to search users",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}
+
+func SearchUsersWithKeywords(c *gin.Context) {
+	keyword := c.Query("keyword")
+	perPage, err := strconv.Atoi(c.Query("per_page"))
+	if err != nil {
+		perPage = 20 // 默认每页显示20条数据
+	}
+	page, err := strconv.Atoi(c.Query("page"))
+	if err != nil {
+		page = 1 // 默认显示第一页
+	}
+
+	users, err := search.SearchUsersWithKeywords(strings.Split(keyword, " "), perPage, page)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "failed to search users",

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/1005281342/user-manager/auth"
+	"github.com/1005281342/user-manager/search"
 	"github.com/gin-gonic/gin"
 
 	"github.com/1005281342/user-manager/api/routes"
@@ -14,15 +15,10 @@ func main() {
 		panic(err)
 	}
 
-	//err = cache.Connect()
-	//if err != nil {
-	//	panic(err)
-	//}
-	//
-	//err = search.Connect()
-	//if err != nil {
-	//	panic(err)
-	//}
+	err = search.Connect()
+	if err != nil {
+		panic(err)
+	}
 
 	r := gin.Default()
 
