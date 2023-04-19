@@ -9,6 +9,7 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"log"
+	"strconv"
 )
 
 var client *elasticsearch.Client
@@ -66,9 +67,27 @@ func SearchUsersWithKeywords(keywords []string, perPage int, page int) ([]models
 		query["query"].(map[string]interface{})["bool"].(map[string]interface{})["should"] = append(
 			query["query"].(map[string]interface{})["bool"].(map[string]interface{})["should"].([]map[string]interface{}),
 			map[string]interface{}{
-				"multi_match": map[string]interface{}{
-					"query":  keyword,
-					"fields": []string{"first_name^3", "last_name^3", "email^2"},
+				"match": map[string]interface{}{
+					"first_name": map[string]interface{}{
+						"query":     keyword,
+						"fuzziness": "AUTO",
+					},
+				},
+			},
+			map[string]interface{}{
+				"match": map[string]interface{}{
+					"last_name": map[string]interface{}{
+						"query":     keyword,
+						"fuzziness": "AUTO",
+					},
+				},
+			},
+			map[string]interface{}{
+				"match": map[string]interface{}{
+					"email": map[string]interface{}{
+						"query":     keyword,
+						"fuzziness": "AUTO",
+					},
 				},
 			},
 		)
@@ -113,4 +132,24 @@ func SearchUsersWithKeywords(keywords []string, perPage int, page int) ([]models
 	}
 
 	return users, nil
+}
+
+func SaveUser(user models.User) error {
+	jsonUser, err := json.Marshal(user)
+	if err != nil {
+		log.Printf("Marshal Error:%+v", err)
+		return err
+	}
+
+	_, err = esapi.IndexRequest{
+		Index:      "users",
+		DocumentID: strconv.Itoa(user.ID),
+		Body:       bytes.NewReader(jsonUser),
+	}.Do(context.Background(), GetClient())
+	if err != nil {
+		log.Printf("IndexRequest Error:%+v", err)
+		return err
+	}
+
+	return nil
 }

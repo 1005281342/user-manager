@@ -1,11 +1,14 @@
 package routes
 
 import (
+	"context"
 	"github.com/1005281342/user-manager/auth"
 	"github.com/1005281342/user-manager/cache"
 	"github.com/1005281342/user-manager/db"
 	"github.com/1005281342/user-manager/models"
 	"github.com/1005281342/user-manager/search"
+	"github.com/elastic/go-elasticsearch/v8/esapi"
+	"github.com/elastic/go-elasticsearch/v8/esutil"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"net/http"
@@ -99,6 +102,26 @@ func UpdateUser(c *gin.Context) {
 		return
 	}
 
+	// Update user in Elasticsearch
+	update := map[string]interface{}{
+		"doc": map[string]interface{}{
+			"first_name": user.FirstName,
+			"last_name":  user.LastName,
+			"email":      user.Email,
+		},
+	}
+
+	res, err := esapi.UpdateRequest{
+		Index:      "users",
+		DocumentID: strconv.Itoa(id),
+		Body:       esutil.NewJSONReader(update),
+	}.Do(context.Background(), search.GetClient())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer res.Body.Close()
+
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
@@ -137,7 +160,7 @@ func updateUserInDBAndCache(id int, firstName string, lastName string, email str
 }
 
 func CreateUser(c *gin.Context) {
-	var user User
+	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -159,6 +182,12 @@ func CreateUser(c *gin.Context) {
 
 	user.ID = id
 
+	// 将用户信息保存到 Elasticsearch 中
+	if err := search.SaveUser(user); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save user"})
+		return
+	}
+
 	c.JSON(http.StatusCreated, user)
 }
 
@@ -176,9 +205,20 @@ func DeleteUser(c *gin.Context) {
 		return
 	}
 
+	// Delete user from Elasticsearch
+	res, err := esapi.DeleteRequest{
+		Index:      "users",
+		DocumentID: id,
+	}.Do(context.Background(), search.GetClient())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	defer res.Body.Close()
+
 	// Delete user
 	query = "DELETE FROM users WHERE id = $1"
-	_, err := db.GetDB().Exec(query, id)
+	_, err = db.GetDB().Exec(query, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
