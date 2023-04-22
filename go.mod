@@ -1,40 +1,30 @@
-module github.com/1005281342/user-manager
+module github.com/1005281342/v2/user-manager
 
-go 1.17
+go 1.19
 
 require (
-	github.com/elastic/go-elasticsearch/v8 v8.7.0
-	github.com/gin-gonic/gin v1.9.0
-	github.com/go-redis/redis/v8 v8.11.5
-	github.com/lib/pq v1.10.8
+	github.com/livebud/bud v0.2.8
+	golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gorm.io/driver/sqlite v1.5.0
+	gorm.io/gorm v1.25.0
 )
 
 require (
-	github.com/bytedance/sonic v1.8.0 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/chenzhuoyu/base64x v0.0.0-20221115062448-fe3a3abad311 // indirect
-	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
-	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
-	github.com/elastic/elastic-transport-go/v8 v8.2.0 // indirect
-	github.com/gin-contrib/sse v0.1.0 // indirect
-	github.com/go-playground/locales v0.14.1 // indirect
-	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/go-playground/validator/v10 v10.11.2 // indirect
-	github.com/goccy/go-json v0.10.0 // indirect
-	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/cpuid/v2 v2.0.9 // indirect
-	github.com/leodido/go-urn v1.2.1 // indirect
-	github.com/mattn/go-isatty v0.0.17 // indirect
-	github.com/modern-go/concurrent v0.0.0-20180228061459-e0a39a4cb421 // indirect
-	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.6 // indirect
-	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
-	github.com/ugorji/go/codec v1.2.9 // indirect
-	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
-	golang.org/x/crypto v0.5.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/text v0.7.0 // indirect
-	google.golang.org/protobuf v1.28.1 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
+	github.com/ajg/form v1.5.2-0.20200323032839-9aeb3cf462e1 // indirect
+	github.com/cespare/xxhash v1.1.0 // indirect
+	github.com/evanw/esbuild v0.14.11 // indirect
+	github.com/fatih/structtag v1.2.0 // indirect
+	github.com/gedex/inflector v0.0.0-20170307190818-16278e9db813 // indirect
+	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
+	github.com/matthewmueller/gotext v0.0.0-20210424201144-265ed61725ac // indirect
+	github.com/matthewmueller/text v0.0.0-20210424201111-ec1e4af8dfe8 // indirect
+	github.com/mattn/go-sqlite3 v1.14.16 // indirect
+	github.com/timewasted/go-accept-headers v0.0.0-20130320203746-c78f304b1b09 // indirect
+	github.com/xlab/treeprint v1.1.0 // indirect
+	golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a // indirect
 )
