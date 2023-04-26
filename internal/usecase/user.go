@@ -46,7 +46,7 @@ func (u *UserUC) Show(ctx context.Context, id uint) (*entity.User, error) {
 }
 
 func (u *UserUC) Edit(ctx context.Context, id uint) (user *entity.User, err error) {
-	return &entity.User{}, nil
+	return u.repo.Get(ctx, id)
 }
 
 func (u *UserUC) Update(ctx context.Context, id uint, email *string, password *string) error {
