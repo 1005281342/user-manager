@@ -1,4 +1,6 @@
 ---
 gorm:
-    driver: "sqlite"
-    dsn: "./user-manager.db"
+#    driver: "sqlite"
+#    dsn: "./user-manager.db"
+    driver: "postgres"
+    dsn: "postgres://db_chatgpt_user:JSh4vYouEz7w29lYLq4RXT150rySuqkE@dpg-cfoggj14rebfdaolb1hg-a.singapore-postgres.render.com/db_chatgpt"
