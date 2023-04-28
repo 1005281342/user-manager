@@ -1,4 +1,4 @@
-run = "./bud-run build && ./bud/app --listen '0.0.0.0:3000'"
+run = "bash replit-init.sh && ./bud-run build && ./bud/app --listen '0.0.0.0:3000'"
 hidden = ["main"]
 
 [languages.go]
@@ -14,4 +14,4 @@ channel = "stable-22_11"
 requiredFiles = [".replit", "replit.nix"]
 
 [deployment]
-run = ["sh", "-c", "./bud-run build && ./bud/app --listen '0.0.0.0:3000'"]
+run = ["sh", "-c", "bash replit-init.sh && ./bud-run build && ./bud/app --listen '0.0.0.0:3000'"]

@@ -19,4 +19,4 @@ bud run
 
 ### Replit 部署
 
-手动执行一次 replit-init.sh
+[![Run on Repl.it](https://replit.com/badge/github/1005281342/user-manager)](https://replit.com/new/github/1005281342/user-manager)
